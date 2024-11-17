@@ -1,0 +1,95 @@
+import os
+import pycurl
+from io import BytesIO
+from pystyle import Write, Colors
+
+version = '1.0.0'
+
+def banner():
+    Write.Print(r'''         ______     __    __     ______     ______     _____     ______  ''' + '\n', Colors.purple_to_blue, interval=0.000)
+    Write.Print(r'''        /\  __ \   /\ "-./  \   /\  == \   /\  ___\   /\  __-.  /\  __ \   ''' + '\n', Colors.purple_to_blue, interval=0.000)
+    Write.Print(r'''        \ \  __ \  \ \ \-./\ \  \ \  __<   \ \  __\   \ \ \/\ \ \ \ \/\ \ ''' + '\n', Colors.purple_to_blue, interval=0.000)
+    Write.Print(r'''         \ \_\ \_\  \ \_\ \ \_\  \ \_____\  \ \_____\  \ \____-  \ \_____\ ''' + '\n', Colors.purple_to_blue, interval=0.000)
+    Write.Print(r'''          \/_/\/_/   \/_/  \/_/   \/_____/   \/_____/   \/____/   \/_____/ ''' + '\n\n', Colors.purple_to_blue, interval=0.000)
+    Write.Print(f'''                            AMBEDO 2 0 2 4 - v{version}                        ''' + '\n\n\n', Colors.red_to_blue, interval=0.000)
+
+def load_proxies_from_file():
+    proxies = []
+    with open(r".\proxies.txt", "r") as file:
+        for line in file:
+            proxy = line.strip()
+            proxies.append(proxy)
+    return proxies
+
+def load_tokens():
+    with open('tokens.txt') as handle:
+        tokens = [token.strip() for token in handle.readlines()]
+    return tokens
+
+def make_request(apilink, headers, proxy):
+    buffer = BytesIO()
+    curl = pycurl.Curl()
+    curl.setopt(curl.URL, apilink)
+    curl.setopt(curl.WRITEDATA, buffer)
+    curl.setopt(curl.HTTPHEADER, headers)
+    curl.setopt(curl.PROXY, proxy)
+    
+    if hasattr(curl, 'PROXYTYPE_HTTP'):
+        curl.setopt(curl.PROXYTYPE, curl.PROXYTYPE_HTTP)
+    
+    try:
+        curl.perform()
+        response_code = curl.getinfo(curl.RESPONSE_CODE)
+        response_body = buffer.getvalue().decode('utf-8')
+        return response_code, response_body
+    except pycurl.error as e:
+        return None, str(e)
+    finally:
+        curl.close()
+
+def main():
+    os.system("title Ambedo @ Server Joiner")
+    os.system('cls')
+    banner()
+
+    tokens = load_tokens()
+    token_count = len(tokens)
+    proxies = load_proxies_from_file()
+    proxy_count = len(proxies)
+
+    Write.Print(f'Successfully Loaded {token_count} Tokens And {proxy_count} Proxies!', Colors.green_to_cyan, interval=0.000)
+    Write.Input(f'\nPress [ ENTER ] To Continue. . .', Colors.purple_to_blue, interval=0.030)
+    os.system('cls')
+    banner()
+
+    link = Write.Input('Server Invite [ Example : pKkmjukV ] > ', Colors.green_to_cyan, interval=0.000)
+
+    if len(link) > 6:
+        link = link[19:]
+
+    apilink = 'https://discord.com/api/v9/invites/' + str(link)
+
+    success_count = 0
+    failure_count = 0
+
+    for token in tokens:
+        for proxy in proxies:
+            headers = [
+                f'Authorization: {token}',
+                'Content-Type: application/json',
+                'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:129.0) Gecko/20100101 Firefox/129.0'
+            ]
+            response_code, _ = make_request(apilink, headers, proxy)
+            if response_code == 200:
+                success_count += 1
+                Write.Print(f'\n[ SUCCESS ] With Token | {token[:8]}*********************** | Using Proxy | {proxy} |', Colors.green_to_cyan, interval=0.000)
+                break 
+            else:
+                Write.Print(f'\n[ ERROR ] With Token | {token[:8]}*********************** | Using Proxy | {proxy} | [ >> ] {response_code}', Colors.red_to_yellow, interval=0.000)
+    
+    Write.Print(f'\nSuccessfully Joined The Server With {success_count} Tokens - Failed To Join The Server With {failure_count} Tokens', Colors.green_to_yellow, interval=0.000)
+    Write.Input(f'\nPress [ ENTER ] To Exit. . .', Colors.purple_to_blue, interval=0.060)
+    quit()
+
+if __name__ == '__main__':
+    main()
